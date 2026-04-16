@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NONSANS Milestone</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        :root { --bg: #000; --text: #fff; --gray: #888; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 60px 20px; }
+        .logo-wrapper { width: 60px; margin-bottom: 15px; text-align: center; }
+        .logo-wrapper img { width: 100%; height: auto; border-radius: 8px; }
+        .milestone-title { font-size: 0.7rem; letter-spacing: 5px; color: var(--gray); margin-bottom: 40px; font-weight: 300; }
+        .counter-section { text-align: center; margin-bottom: 60px; }
+        #display-count { font-size: 4.5rem; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+        .unit { font-size: 1rem; color: var(--gray); margin-left: 5px; vertical-align: middle; }
+        .btn-group { margin-top: 25px; }
+        .update-btn { background: transparent; color: #444; border: 1px solid #222; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; transition: 0.3s; }
+        .update-btn:hover { color: #fff; border-color: #fff; }
+        .board { width: 100%; max-width: 380px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 25px; border-radius: 20px; margin-bottom: 25px; box-sizing: border-box; }
+        h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; color: #eee; }
+        #history-list, #msg-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a; animation: fadeIn 0.5s ease; }
+        .item:last-child { border: none; }
+        .input-box { display: flex; gap: 8px; margin-top: 15px; }
+        input { background: #1a1a1a; border: none; color: #fff; padding: 12px; border-radius: 10px; flex-grow: 1; font-size: 0.85rem; }
+        .send-btn { background: #fff; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="logo-wrapper"><img src="논산스 로고(배경O).png" alt="NONSANS"></div>
+    <div class="milestone-title">NONSANS MAGAZINE</div>
+    <div class="counter-section">
+        <div><span id="display-count">0</span><span class="unit">FOLLOWERS</span></div>
+        <div class="btn-group"><button class="update-btn" onclick="updateFollower()">UPDATE COUNT</button></div>
+    </div>
+    <div class="board"><h3>ARCHIVE</h3><ul id="history-list"></ul></div>
+    <div class="board"><h3>EDITORS' NOTE</h3><ul id="msg-list"></ul>
+        <div class="input-box"><input type="text" id="msgInput" placeholder="Write a message..."><button class="send-btn" onclick="addNote()">SEND</button></div>
+    </div>
+
+    <script>
+        // 에디터님의 사진 속 정보를 그대로 반영했습니다.
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcSvwFrptTwoorfcYwW1Hamkquecn-TYw",
+            authDomain: "nonsans-20612.firebaseapp.com",
+            databaseURL: "https://nonsans-20612-default-rtdb.asia-southeast1.firebasedatabase.app", // 싱가포르 서버 기준
+            projectId: "nonsans-20612",
+            storageBucket: "nonsans-20612.appspot.com",
+            messagingSenderId: "289009096287",
+            appId: "1:289009096287:web:fed7ca8fdc7d16454dedea"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentCount = 0;
+
+        // 실시간 동기화 시작
+        db.ref('followerCount').on('value', (snap) => {
+            currentCount = snap.val() || 0;
+            document.getElementById('display-count').innerText = currentCount.toLocaleString();
+        });
+
+        db.ref('history').on('value', (snap) => {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            snap.forEach((child) => {
+                const data = child.val();
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.innerHTML = `<span>${data.count.toLocaleString()} Followers</span><span style="color:#444">${data.date}</span>`;
+                list.prepend(li);
+            });
+        });
+
+        db.ref('notes').on('value', (snap) => {
+            const list = document.getElementById('msg-list');
+            list.innerHTML = '';
+            snap.forEach((child) => {
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.innerHTML = `<span>${child.val().text}</span>`;
+                list.prepend(li);
+            });
+        });
+
+        function updateFollower() {
+            const val = prompt("현재 팔로워 수를 입력하세요.");
+            if (val && !isNaN(val)) {
+                const newCount = parseInt(val);
+                if (Math.floor(newCount / 100) > Math.floor(currentCount / 100)) {
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+                    db.ref('history').push({ count: newCount, date: dateStr });
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                }
+                db.ref('followerCount').set(newCount);
+            }
+        }
+
+        function addNote() {
+            const input = document.getElementById('msgInput');
+            if (!input.value) return;
+            db.ref('notes').push({ text: input.value });
+            input.value = "";
+            confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 } });
+        }
+    </script>
+</body>
+</html>
