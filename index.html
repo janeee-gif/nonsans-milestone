@@ -19,15 +19,21 @@
         .btn-group { margin-top: 25px; }
         .update-btn { background: transparent; color: #444; border: 1px solid #222; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; transition: 0.3s; }
         .update-btn:hover { color: #fff; border-color: #fff; }
+        
         .board { width: 100%; max-width: 380px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 25px; border-radius: 20px; margin-bottom: 25px; box-sizing: border-box; }
-        h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; color: #eee; }
+        h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; color: #eee; }
+        
         #history-list, #msg-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
-        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a; animation: fadeIn 0.5s ease; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
         .item:last-child { border: none; }
+        
+        /* 삭제 버튼 스타일 */
+        .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; transition: 0.2s; }
+        .del-btn:hover { color: #ff4d4d; }
+
         .input-box { display: flex; gap: 8px; margin-top: 15px; }
         input { background: #1a1a1a; border: none; color: #fff; padding: 12px; border-radius: 10px; flex-grow: 1; font-size: 0.85rem; }
         .send-btn { background: #fff; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -43,11 +49,11 @@
     </div>
 
     <script>
-        // 에디터님의 사진 속 정보를 그대로 반영했습니다.
+        // 에디터님의 Firebase 정보 (기존 정보를 그대로 사용하세요)
         const firebaseConfig = {
             apiKey: "AIzaSyBcSvwFrptTwoorfcYwW1Hamkquecn-TYw",
             authDomain: "nonsans-20612.firebaseapp.com",
-            databaseURL: "https://nonsans-20612-default-rtdb.asia-southeast1.firebasedatabase.app", // 싱가포르 서버 기준
+            databaseURL: "https://nonsans-20612-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "nonsans-20612",
             storageBucket: "nonsans-20612.appspot.com",
             messagingSenderId: "289009096287",
@@ -58,35 +64,46 @@
 
         let currentCount = 0;
 
-        // 실시간 동기화 시작
+        // 1. 팔로워 숫자 동기화
         db.ref('followerCount').on('value', (snap) => {
             currentCount = snap.val() || 0;
             document.getElementById('display-count').innerText = currentCount.toLocaleString();
         });
 
+        // 2. 아카이브 기록 동기화 (삭제 기능 추가)
         db.ref('history').on('value', (snap) => {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
             snap.forEach((child) => {
                 const data = child.val();
+                const key = child.key; // 고유 번호
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.innerHTML = `<span>${data.count.toLocaleString()} Followers</span><span style="color:#444">${data.date}</span>`;
+                li.innerHTML = `
+                    <div><span>${data.count.toLocaleString()} Followers</span><span style="color:#444; margin-left:10px;">${data.date}</span></div>
+                    <button class="del-btn" onclick="deleteItem('history', '${key}')">삭제</button>
+                `;
                 list.prepend(li);
             });
         });
 
+        // 3. 에디터 노트 동기화 (삭제 기능 추가)
         db.ref('notes').on('value', (snap) => {
             const list = document.getElementById('msg-list');
             list.innerHTML = '';
             snap.forEach((child) => {
+                const key = child.key;
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.innerHTML = `<span>${child.val().text}</span>`;
+                li.innerHTML = `
+                    <span>${child.val().text}</span>
+                    <button class="del-btn" onclick="deleteItem('notes', '${key}')">삭제</button>
+                `;
                 list.prepend(li);
             });
         });
 
+        // 업데이트 함수 (숫자 입력 시 폭죽)
         function updateFollower() {
             const val = prompt("현재 팔로워 수를 입력하세요.");
             if (val && !isNaN(val)) {
@@ -101,12 +118,19 @@
             }
         }
 
+        // 노트 추가 (폭죽 제거)
         function addNote() {
             const input = document.getElementById('msgInput');
             if (!input.value) return;
             db.ref('notes').push({ text: input.value });
             input.value = "";
-            confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 } });
+        }
+
+        // 삭제 통합 함수
+        function deleteItem(path, key) {
+            if (confirm("정말로 삭제하시겠습니까?")) {
+                db.ref(`${path}/${key}`).remove();
+            }
         }
     </script>
 </body>
