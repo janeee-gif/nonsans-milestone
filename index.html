@@ -36,7 +36,6 @@
         .item:last-child { border: none; }
         .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; }
 
-        /* 더보기/접기 버튼 스타일 */
         #view-more-btn { width: 100%; padding: 15px 0 5px 0; background: transparent; border: none; color: #444; font-size: 0.75rem; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; display: none; }
         #view-more-btn:hover { color: #fff; }
 
@@ -58,7 +57,6 @@
 
     <div class="board">
         <h3>ARCHIVE <button class="open-form-btn" onclick="toggleForm()">+ 기록 추가하기</button></h3>
-        
         <div id="manual-form">
             <input type="date" id="pastDate">
             <input type="number" id="pastCount" placeholder="달성 팔로워 수">
@@ -67,7 +65,6 @@
                 <button class="cancel-btn" onclick="toggleForm()">취소</button>
             </div>
         </div>
-
         <ul id="history-list"></ul>
         <button id="view-more-btn" onclick="toggleHistoryView()">View More ↓</button>
     </div>
@@ -115,7 +112,8 @@
             const viewMoreBtn = document.getElementById('view-more-btn');
             list.innerHTML = '';
 
-            const displayItems = isShowingAll ? allHistoryItems : allHistoryItems.slice(0, 10);
+            // [수정] 10개에서 7개로 변경
+            const displayItems = isShowingAll ? allHistoryItems : allHistoryItems.slice(0, 7);
 
             displayItems.forEach((data) => {
                 const li = document.createElement('li');
@@ -124,19 +122,17 @@
                 list.appendChild(li);
             });
 
-            // 아이템이 10개보다 많을 때만 버튼 활성화
-            if (allHistoryItems.length > 10) {
+            // [수정] 7개보다 많을 때만 버튼 표시
+            if (allHistoryItems.length > 7) {
                 viewMoreBtn.style.display = 'block';
-                // 상태에 따라 버튼 문구 변경
                 viewMoreBtn.innerText = isShowingAll ? "Close ↑" : "View More ↓";
             } else {
                 viewMoreBtn.style.display = 'none';
             }
         }
 
-        // 펼치기/접기 토글 함수
         function toggleHistoryView() {
-            isShowingAll = !isShowingAll; // 상태 반전
+            isShowingAll = !isShowingAll;
             renderHistory();
         }
 
