@@ -23,22 +23,22 @@
         .board { width: 100%; max-width: 380px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 25px; border-radius: 20px; margin-bottom: 25px; box-sizing: border-box; }
         h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; color: #eee; display: flex; justify-content: space-between; align-items: center; }
         
-        /* [핵심] 숨겨진 입력창 스타일 */
         #manual-form { display: none; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 15px; background: #111; border-radius: 12px; border: 1px solid #222; animation: fadeIn 0.3s ease; }
         #manual-form input { background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 8px; font-size: 0.85rem; }
         .form-btns { display: flex; gap: 8px; }
         .confirm-btn { background: #fff; color: #000; border: none; flex: 2; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .cancel-btn { background: #333; color: #fff; border: none; flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; }
         
-        /* 기록 추가 버튼 */
         .open-form-btn { font-size: 0.65rem; color: var(--gray); border: 1px solid #222; padding: 4px 8px; border-radius: 10px; cursor: pointer; background: transparent; }
-        .open-form-btn:hover { border-color: #555; color: #fff; }
 
         #history-list, #msg-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
         .item:last-child { border: none; }
         .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; }
-        .del-btn:hover { color: #ff4d4d; }
+
+        /* [핵심] 더보기 버튼 스타일 */
+        #view-more-btn { width: 100%; padding: 15px 0 5px 0; background: transparent; border: none; color: #444; font-size: 0.75rem; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; display: none; }
+        #view-more-btn:hover { color: #fff; }
 
         .input-box { display: flex; gap: 8px; margin-top: 15px; }
         .input-box input { background: #1a1a1a; border: none; color: #fff; padding: 12px; border-radius: 10px; flex-grow: 1; font-size: 0.85rem; }
@@ -69,6 +69,7 @@
         </div>
 
         <ul id="history-list"></ul>
+        <button id="view-more-btn" onclick="showAllHistory()">View More ↓</button>
     </div>
 
     <div class="board">
@@ -94,24 +95,49 @@
         const db = firebase.database();
 
         let currentCount = 0;
+        let allHistoryItems = [];
+        let isShowingAll = false;
 
         db.ref('followerCount').on('value', (snap) => {
             currentCount = snap.val() || 0;
             document.getElementById('display-count').innerText = currentCount.toLocaleString();
         });
 
+        // 히스토리 불러오기 로직 수정
         db.ref('history').orderByChild('date').on('value', (snap) => {
+            allHistoryItems = [];
+            snap.forEach((child) => { allHistoryItems.push({ key: child.key, ...child.val() }); });
+            allHistoryItems.reverse();
+            renderHistory();
+        });
+
+        function renderHistory() {
             const list = document.getElementById('history-list');
+            const viewMoreBtn = document.getElementById('view-more-btn');
             list.innerHTML = '';
-            const items = [];
-            snap.forEach((child) => { items.push({ key: child.key, ...child.val() }); });
-            items.reverse().forEach((data) => {
+
+            // 보여줄 아이템 개수 결정 (더보기를 누르지 않았으면 최대 10개)
+            const displayItems = isShowingAll ? allHistoryItems : allHistoryItems.slice(0, 10);
+
+            displayItems.forEach((data) => {
                 const li = document.createElement('li');
                 li.className = 'item';
                 li.innerHTML = `<div><span>${data.count.toLocaleString()} Followers</span><span style="color:#444; margin-left:10px;">${data.date}</span></div><button class="del-btn" onclick="deleteItem('history', '${data.key}')">삭제</button>`;
                 list.appendChild(li);
             });
-        });
+
+            // 아이템이 10개보다 많고 아직 '모두 보기' 상태가 아닐 때만 버튼 표시
+            if (allHistoryItems.length > 10 && !isShowingAll) {
+                viewMoreBtn.style.display = 'block';
+            } else {
+                viewMoreBtn.style.display = 'none';
+            }
+        }
+
+        function showAllHistory() {
+            isShowingAll = true;
+            renderHistory();
+        }
 
         db.ref('notes').on('value', (snap) => {
             const list = document.getElementById('msg-list');
@@ -124,7 +150,6 @@
             });
         });
 
-        // 입력 폼 토글 함수
         function toggleForm() {
             const form = document.getElementById('manual-form');
             form.style.display = (form.style.display === 'flex') ? 'none' : 'flex';
@@ -151,7 +176,7 @@
             const formattedDate = dateInput.replace(/-/g, '.');
             db.ref('history').push({ count: parseInt(countInput), date: formattedDate });
             document.getElementById('pastCount').value = '';
-            toggleForm(); // 추가 후 닫기
+            toggleForm();
         }
 
         function addNote() {
