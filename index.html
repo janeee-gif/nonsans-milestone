@@ -36,7 +36,7 @@
         .item:last-child { border: none; }
         .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; }
 
-        /* [핵심] 더보기 버튼 스타일 */
+        /* 더보기/접기 버튼 스타일 */
         #view-more-btn { width: 100%; padding: 15px 0 5px 0; background: transparent; border: none; color: #444; font-size: 0.75rem; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; display: none; }
         #view-more-btn:hover { color: #fff; }
 
@@ -69,7 +69,7 @@
         </div>
 
         <ul id="history-list"></ul>
-        <button id="view-more-btn" onclick="showAllHistory()">View More ↓</button>
+        <button id="view-more-btn" onclick="toggleHistoryView()">View More ↓</button>
     </div>
 
     <div class="board">
@@ -103,7 +103,6 @@
             document.getElementById('display-count').innerText = currentCount.toLocaleString();
         });
 
-        // 히스토리 불러오기 로직 수정
         db.ref('history').orderByChild('date').on('value', (snap) => {
             allHistoryItems = [];
             snap.forEach((child) => { allHistoryItems.push({ key: child.key, ...child.val() }); });
@@ -116,7 +115,6 @@
             const viewMoreBtn = document.getElementById('view-more-btn');
             list.innerHTML = '';
 
-            // 보여줄 아이템 개수 결정 (더보기를 누르지 않았으면 최대 10개)
             const displayItems = isShowingAll ? allHistoryItems : allHistoryItems.slice(0, 10);
 
             displayItems.forEach((data) => {
@@ -126,16 +124,19 @@
                 list.appendChild(li);
             });
 
-            // 아이템이 10개보다 많고 아직 '모두 보기' 상태가 아닐 때만 버튼 표시
-            if (allHistoryItems.length > 10 && !isShowingAll) {
+            // 아이템이 10개보다 많을 때만 버튼 활성화
+            if (allHistoryItems.length > 10) {
                 viewMoreBtn.style.display = 'block';
+                // 상태에 따라 버튼 문구 변경
+                viewMoreBtn.innerText = isShowingAll ? "Close ↑" : "View More ↓";
             } else {
                 viewMoreBtn.style.display = 'none';
             }
         }
 
-        function showAllHistory() {
-            isShowingAll = true;
+        // 펼치기/접기 토글 함수
+        function toggleHistoryView() {
+            isShowingAll = !isShowingAll; // 상태 반전
             renderHistory();
         }
 
