@@ -13,43 +13,65 @@
         .logo-wrapper { width: 60px; margin-bottom: 15px; text-align: center; }
         .logo-wrapper img { width: 100%; height: auto; border-radius: 8px; }
         .milestone-title { font-size: 0.7rem; letter-spacing: 5px; color: var(--gray); margin-bottom: 40px; font-weight: 300; }
+        
+        /* 팔로워 카운트 */
         .counter-section { text-align: center; margin-bottom: 60px; }
         #display-count { font-size: 4.5rem; font-weight: 900; letter-spacing: -2px; line-height: 1; }
         .unit { font-size: 1rem; color: var(--gray); margin-left: 5px; vertical-align: middle; }
-        .btn-group { margin-top: 25px; }
-        .update-btn { background: transparent; color: #444; border: 1px solid #222; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; transition: 0.3s; }
+        .update-btn { background: transparent; color: #444; border: 1px solid #222; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; transition: 0.3s; margin-top: 25px; }
         .update-btn:hover { color: #fff; border-color: #fff; }
-        
+
+        /* 보드 디자인 */
         .board { width: 100%; max-width: 380px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 25px; border-radius: 20px; margin-bottom: 25px; box-sizing: border-box; }
-        h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; color: #eee; }
+        h3 { margin: 0 0 20px 0; font-size: 0.9rem; font-weight: 600; color: #eee; display: flex; justify-content: space-between; align-items: center; }
         
+        /* 수동 입력 폼 스타일 */
+        .manual-input { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #222; }
+        .manual-input input { background: #111; border: 1px solid #222; color: #fff; padding: 8px; border-radius: 8px; font-size: 0.8rem; }
+        .add-history-btn { background: #222; color: #fff; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+        .add-history-btn:hover { background: #444; }
+
         #history-list, #msg-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
         .item:last-child { border: none; }
-        
-        /* 삭제 버튼 스타일 */
-        .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; transition: 0.2s; }
+        .del-btn { background: transparent; color: #333; border: none; cursor: pointer; font-size: 0.7rem; margin-left: 10px; }
         .del-btn:hover { color: #ff4d4d; }
 
         .input-box { display: flex; gap: 8px; margin-top: 15px; }
-        input { background: #1a1a1a; border: none; color: #fff; padding: 12px; border-radius: 10px; flex-grow: 1; font-size: 0.85rem; }
+        .input-box input { background: #1a1a1a; border: none; color: #fff; padding: 12px; border-radius: 10px; flex-grow: 1; font-size: 0.85rem; }
         .send-btn { background: #fff; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
     </style>
 </head>
 <body>
     <div class="logo-wrapper"><img src="논산스 로고(배경O).png" alt="NONSANS"></div>
     <div class="milestone-title">NONSANS MAGAZINE</div>
+
     <div class="counter-section">
         <div><span id="display-count">0</span><span class="unit">FOLLOWERS</span></div>
-        <div class="btn-group"><button class="update-btn" onclick="updateFollower()">UPDATE COUNT</button></div>
+        <button class="update-btn" onclick="updateFollower()">UPDATE COUNT</button>
     </div>
-    <div class="board"><h3>ARCHIVE</h3><ul id="history-list"></ul></div>
-    <div class="board"><h3>EDITORS' NOTE</h3><ul id="msg-list"></ul>
-        <div class="input-box"><input type="text" id="msgInput" placeholder="Write a message..."><button class="send-btn" onclick="addNote()">SEND</button></div>
+
+    <div class="board">
+        <h3>ARCHIVE</h3>
+        <div class="manual-input">
+            <input type="date" id="pastDate">
+            <input type="number" id="pastCount" placeholder="달성 팔로워 수 (예: 1000)">
+            <button class="add-history-btn" onclick="addPastHistory()">과거 기록 추가하기</button>
+        </div>
+        <ul id="history-list"></ul>
+    </div>
+
+    <div class="board">
+        <h3>EDITORS' NOTE</h3>
+        <ul id="msg-list"></ul>
+        <div class="input-box">
+            <input type="text" id="msgInput" placeholder="Write a message...">
+            <button class="send-btn" onclick="addNote()">SEND</button>
+        </div>
     </div>
 
     <script>
-        // 에디터님의 Firebase 정보 (기존 정보를 그대로 사용하세요)
+        // 에디터님의 Firebase 정보
         const firebaseConfig = {
             apiKey: "AIzaSyBcSvwFrptTwoorfcYwW1Hamkquecn-TYw",
             authDomain: "nonsans-20612.firebaseapp.com",
@@ -64,46 +86,43 @@
 
         let currentCount = 0;
 
-        // 1. 팔로워 숫자 동기화
         db.ref('followerCount').on('value', (snap) => {
             currentCount = snap.val() || 0;
             document.getElementById('display-count').innerText = currentCount.toLocaleString();
         });
 
-        // 2. 아카이브 기록 동기화 (삭제 기능 추가)
-        db.ref('history').on('value', (snap) => {
+        // 아카이브 리스트 출력 (날짜순 정렬을 위해 쿼리 사용)
+        db.ref('history').orderByChild('date').on('value', (snap) => {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
+            const items = [];
             snap.forEach((child) => {
-                const data = child.val();
-                const key = child.key; // 고유 번호
+                items.push({ key: child.key, ...child.val() });
+            });
+            // 최신순으로 보여주기 위해 뒤집기
+            items.reverse().forEach((data) => {
                 const li = document.createElement('li');
                 li.className = 'item';
                 li.innerHTML = `
                     <div><span>${data.count.toLocaleString()} Followers</span><span style="color:#444; margin-left:10px;">${data.date}</span></div>
-                    <button class="del-btn" onclick="deleteItem('history', '${key}')">삭제</button>
+                    <button class="del-btn" onclick="deleteItem('history', '${data.key}')">삭제</button>
                 `;
-                list.prepend(li);
+                list.appendChild(li);
             });
         });
 
-        // 3. 에디터 노트 동기화 (삭제 기능 추가)
         db.ref('notes').on('value', (snap) => {
             const list = document.getElementById('msg-list');
             list.innerHTML = '';
             snap.forEach((child) => {
-                const key = child.key;
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.innerHTML = `
-                    <span>${child.val().text}</span>
-                    <button class="del-btn" onclick="deleteItem('notes', '${key}')">삭제</button>
-                `;
+                li.innerHTML = `<span>${child.val().text}</span><button class="del-btn" onclick="deleteItem('notes', '${child.key}')">삭제</button>`;
                 list.prepend(li);
             });
         });
 
-        // 업데이트 함수 (숫자 입력 시 폭죽)
+        // 실시간 현재 수 업데이트 (폭죽 포함)
         function updateFollower() {
             const val = prompt("현재 팔로워 수를 입력하세요.");
             if (val && !isNaN(val)) {
@@ -118,7 +137,26 @@
             }
         }
 
-        // 노트 추가 (폭죽 제거)
+        // 과거 기록 수동 추가 (폭죽 미발생)
+        function addPastHistory() {
+            const dateInput = document.getElementById('pastDate').value;
+            const countInput = document.getElementById('pastCount').value;
+
+            if (!dateInput || !countInput) {
+                alert("날짜와 팔로워 수를 모두 입력해주세요!");
+                return;
+            }
+
+            const formattedDate = dateInput.replace(/-/g, '.');
+            db.ref('history').push({
+                count: parseInt(countInput),
+                date: formattedDate
+            });
+
+            document.getElementById('pastCount').value = '';
+            alert("과거 기록이 추가되었습니다.");
+        }
+
         function addNote() {
             const input = document.getElementById('msgInput');
             if (!input.value) return;
@@ -126,7 +164,6 @@
             input.value = "";
         }
 
-        // 삭제 통합 함수
         function deleteItem(path, key) {
             if (confirm("정말로 삭제하시겠습니까?")) {
                 db.ref(`${path}/${key}`).remove();
